@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const bcrypt = require('bcrypt-nodejs')
 const httpStatus = require('http-status')
 const APIError = require('../utils/APIError')
+const uniqueValidator = require('mongoose-unique-validator')
 const Schema = mongoose.Schema
 
 const roles = [
@@ -10,7 +11,7 @@ const roles = [
 ]
 
 const userSchema = new Schema({
-  email: {
+  username: {
     type: String,
     required: true,
     unique: true,
@@ -22,7 +23,11 @@ const userSchema = new Schema({
     minlength: 4,
     maxlength: 128
   },
-  name: {
+  first_name: {
+    type: String,
+    maxlength: 50
+  },
+  last_name: {
     type: String,
     maxlength: 50
   },
@@ -32,9 +37,9 @@ const userSchema = new Schema({
     enum: roles
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  discriminatorKey: 'kind'
 })
-
 userSchema.pre('save', async function save (next) {
   try {
     if (!this.isModified('password')) {
@@ -51,11 +56,11 @@ userSchema.pre('save', async function save (next) {
 
 userSchema.method({
   transform () {
-    const transformed = {}
-    const fields = ['id', 'name', 'email', 'createdAt', 'role']
+    const transformed = this.toObject()
+    const exceptfields = ['password', 'updatedAt']
 
-    fields.forEach((field) => {
-      transformed[field] = this[field]
+    exceptfields.forEach((field) => {
+      delete transformed[field]
     })
 
     return transformed
@@ -70,6 +75,7 @@ userSchema.statics = {
   roles,
 
   checkDuplicateEmailError (err) {
+    // console.log(Object.keys(err.errors))
     if (err.code === 11000) {
       var error = new Error('Email already taken')
       error.errors = [{
@@ -85,11 +91,11 @@ userSchema.statics = {
   },
 
   async findAndGenerateToken (payload) {
-    const { email, password } = payload
-    if (!email) throw new APIError('Email must be provided for login')
+    const { username, password } = payload
+    if (!username) throw new APIError('Username must be provided for login')
 
-    const user = await this.findOne({ email }).exec()
-    if (!user) throw new APIError(`No user associated with ${email}`, httpStatus.NOT_FOUND)
+    const user = await this.findOne({ username }).exec()
+    if (!user) throw new APIError(`No user associated with ${username}`, httpStatus.NOT_FOUND)
 
     const passwordOK = await user.passwordMatches(password)
 
@@ -98,5 +104,5 @@ userSchema.statics = {
     return user
   }
 }
-
+userSchema.plugin(uniqueValidator)
 module.exports = mongoose.model('User', userSchema)
