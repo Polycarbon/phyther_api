@@ -9,22 +9,21 @@ exports.register = async (req, res, next) => {
   try {
     const user = new User(req.body)
     const savedUser = await user.save()
-    // res.status(httpStatus.CREATED)
-    res.send(savedUser.transform())
+    res.status(httpStatus.CREATED)
+      .send(savedUser.transform())
   } catch (error) {
-    console.log(error)
-    return next(User.checkDuplicateEmailError(error))
+    return next(error)
   }
 }
 
 exports.login = async (req, res, next) => {
+  console.log(req.body)
   try {
     const user = await User.findAndGenerateToken(req.body)
     const payload = {data: user.transform()}
     const token = jwt.sign(payload, config.secret)
     return res.json({ message: 'OK', accessToken: token })
   } catch (error) {
-    console.log(error)
     next(error)
   }
 }

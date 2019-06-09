@@ -7,7 +7,7 @@ const uniqueValidator = require('mongoose-unique-validator')
 const Schema = mongoose.Schema
 
 const roles = [
-  'user', 'admin'
+  'user', 'admin', 'doctor', 'patient'
 ]
 
 const userSchema = new Schema({
@@ -31,14 +31,14 @@ const userSchema = new Schema({
     type: String,
     maxlength: 50
   },
-  role: {
+  type: {
     type: String,
     default: 'user',
     enum: roles
   }
 }, {
   timestamps: true,
-  discriminatorKey: 'kind'
+  discriminatorKey: 'type'
 })
 userSchema.pre('save', async function save (next) {
   try {
@@ -104,5 +104,5 @@ userSchema.statics = {
     return user
   }
 }
-userSchema.plugin(uniqueValidator)
+// userSchema.plugin(uniqueValidator)
 module.exports = mongoose.model('User', userSchema)

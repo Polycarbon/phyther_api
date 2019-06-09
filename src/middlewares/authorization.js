@@ -34,7 +34,7 @@ const handleJWT = (req, res, next, roles) => async (err, user, info) => {
 }
 
 // exports the middleware
-const authorize = (roles = User.roles) => (req, res, next) =>
+const authorize = (roles = User.type) => (req, res, next) =>
   passport.authenticate(
     'jwt',
     { session: false },
