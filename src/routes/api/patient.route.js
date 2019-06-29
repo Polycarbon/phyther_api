@@ -14,4 +14,5 @@ router.get('/:HN', patientController.getPatientByHN)
 router.get('/generate/:n', patientController.generate) // genarate
 router.post('/assign/:HN', patientController.assign)
 router.post('/updateAssignment/:HN', patientController.updateAssignments)
+router.post('/deleteAssignment/:HN', patientController.deleteAssignment)
 module.exports = router

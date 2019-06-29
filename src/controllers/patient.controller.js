@@ -66,7 +66,6 @@ exports.assign = async (req, res, next) => {
     let course = req.body
     let startDate = new Date(course.start_date)
     let endDate = new Date(startDate).setDate(startDate.getDate() + 30)
-    let patient = null
     let i = 0
     // eslint-disable-next-line no-unmodified-loop-condition
     for (let d = startDate; d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -84,14 +83,9 @@ exports.assign = async (req, res, next) => {
           assignment.weight = weight
           assignment.gestures = gestures
           assignment.date_time = d
-          patient = await Patient.findOneAndUpdate(req.params, {$push: {assignments: assignment}}, {new: true})
+          await Patient.findOneAndUpdate(req.params, {$push: {assignments: assignment}}, {new: true})
         }
       })
-    }
-    if (!patient) {
-      res.status(httpStatus.INTERNAL_SERVER_ERROR)
-        .send(patient)
-      return
     }
     res.status(httpStatus.OK)
       .send({
@@ -122,26 +116,6 @@ exports.updateAssignment = async (req, res, next) => {
   console.log(update)
   let patient = await Patient.update(query, {$set: update}, {strict: false, new: true})
   res.send(patient)
-  // Patient.findOneAndUpdate(req.params._id, update, {new: true})
-  //   .then(original => {
-  //     if (!original) {
-  //       res.status(httpStatus.INTERNAL_SERVER_ERROR)
-  //         .send({
-  //           message: req.params.HN + ' not exist.'
-  //         })
-  //       return
-  //     }
-  //     res.status(httpStatus.OK)
-  //       .send({
-  //         message: req.params.HN + ' is updated.',
-  //         data: original
-  //       })
-  //   }).catch(err => {
-  //     res.status(httpStatus.INTERNAL_SERVER_ERROR)
-  //       .send({
-  //         message: err.message || 'Some error occurred while retrieving notes.'
-  //       })
-  //   })
 }
 
 exports.updateAssignments = async (req, res, next) => {
@@ -169,6 +143,28 @@ exports.updateAssignments = async (req, res, next) => {
           message: err.message || 'Some error occurred while retrieving notes.'
         })
     })
+}
+
+exports.deleteAssignment = async (req, res, next) => {
+  console.log(req.body)
+  Patient.findOne({HN: req.body.HN}, async function (error, patient) {
+    if (error) {
+      res.send(null, 500)
+    } else if (patient) {
+      // // find the delete uid in the favorites array
+      patient.assignments = patient.assignments.filter(function (assignment) {
+        return assignment._id != req.body.assignment_id
+      })
+      try {
+        let savedPatience = await patient.save()
+        res.status(httpStatus.CREATED)
+          .send(savedPatience.transform())
+      } catch (error) {
+        // console.log(error)
+        return next(error)
+      }
+    }
+  })
 }
 
 exports.generate = async (req, res, next) => {
