@@ -21,8 +21,8 @@ exerciseDoc.discriminator('assignment', new Schema({
   },
   status: {
     type: String,
-    enum: ['Complete', 'Expired', 'Not Complete'],
-    default: 'Not Complete'
+    enum: ['Complete', 'Expired', 'Incomplete'],
+    default: 'Incomplete'
   },
   progress: {
     type: Number,

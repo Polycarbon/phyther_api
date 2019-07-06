@@ -3,7 +3,7 @@ const User = require('./user.model')
 const Schema = mongoose.Schema
 
 const doctorSchema = new Schema({
-  patients: [{type: Schema.ObjectId, ref: 'patient'}]
+  patients: [{type: Schema.Types.ObjectId, ref: 'User'}]
 })
 
 module.exports = User.discriminator('doctor', doctorSchema)

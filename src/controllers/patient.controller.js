@@ -4,6 +4,7 @@ const httpStatus = require('http-status')
 const jwt = require('jsonwebtoken')
 const config = require('../config')
 const axios = require('axios')
+const Course = require('../models/course.model')
 
 exports.register = async (req, res, next) => {
   console.log(req.body)
@@ -62,11 +63,10 @@ exports.getPatientByHN = (req, res, next) => {
 exports.assign = async (req, res, next) => {
   // Find user and update it with the request body
   try {
-    // let patient = await Patient.findOneAndUpdate(req.params, {$push: {assignments: req.body}}, {new: true})
-    let course = req.body
-    let startDate = new Date(course.start_date)
-    let endDate = new Date(startDate).setDate(startDate.getDate() + 30)
+    let startDate = new Date(req.body.start_date)
+    let endDate = new Date(req.body.end_date)
     let i = 0
+    let course = await Course.findOne({course_name: req.body.name})
     // eslint-disable-next-line no-unmodified-loop-condition
     for (let d = startDate; d <= endDate; d.setDate(d.getDate() + 1)) {
       course.exercises.forEach(async exercise => {
@@ -104,18 +104,38 @@ exports.assign = async (req, res, next) => {
 exports.updateAssignment = async (req, res, next) => {
   // Find user and update it with the request body
   // let update = {$set: req.body}
+  let gestures = req.body.gestures
   let query = {
     HN: req.params.HN,
-    'assignments._id': req.params.assignment_id,
+    'assignments._id': req.body._id,
     'assignments.type': 'assignment'
   }
   let update = {
-    'assignments.$.status': req.body.status,
-    'assignments.$.progress': req.body.progress
+    'assignments.$[assignment].status': req.body.status,
+    'assignments.$[assignment].progress': req.body.progress
   }
-  console.log(update)
-  let patient = await Patient.update(query, {$set: update}, {strict: false, new: true})
-  res.send(patient)
+  let itemsProcessed = 0
+  gestures.forEach(async (gesture, index, array) => {
+    update['assignments.$[assignment].gestures.$[gesture].pass'] = gesture.pass
+    update['assignments.$[assignment].gestures.$[gesture].fail'] = gesture.fail
+    let opts = {
+      arrayFilters: [{
+        'assignment._id': {$eq: req.body._id}
+      }, {
+        'gesture.gesture_id': {$eq: gesture.gesture_id}
+      }],
+      upsert: true,
+      strict: false,
+      new: true
+    }
+    let result = await Patient.update(query, {$set: update}, opts)
+    itemsProcessed++
+    if (itemsProcessed === array.length) {
+      res.send(result)
+    }
+  })
+  console.log(req.body._id)
+  //
 }
 
 exports.updateAssignments = async (req, res, next) => {
@@ -145,14 +165,48 @@ exports.updateAssignments = async (req, res, next) => {
     })
 }
 
+exports.mockAssignments = async (req, res, next) => {
+  // Find user and update it with the request body
+  let patient = await Patient.findOne({HN: req.params.HN})
+  patient.assignments.forEach(async assignment => {
+    assignment.gestures.forEach(gesture => {
+      gesture.pass = 5
+      gesture.fail = Math.floor(Math.random() * 5)
+    })
+    assignment.status = 'Complete'
+    assignment.progress = 100
+    console.log(assignment)
+    let query = {
+      HN: req.params.HN,
+      'assignments.type': 'assignment'
+    }
+    let update = {
+      'assignments.$[assignment].status': assignment.status,
+      'assignments.$[assignment].progress': assignment.progress,
+      'assignments.$[assignment].gestures': assignment.gestures
+    }
+    let opts = {
+      arrayFilters: [{'assignment._id': {$eq: assignment._id}}],
+      upsert: true,
+      strict: false,
+      new: true
+    }
+    let result = await Patient.update(query, {$set: update}, opts)
+  })
+  res.send('ok')
+}
+
 exports.deleteAssignment = async (req, res, next) => {
   console.log(req.body)
   Patient.findOne({HN: req.body.HN}, async function (error, patient) {
     if (error) {
+      console.log(error)
       res.send(null, 500)
     } else if (patient) {
       // // find the delete uid in the favorites array
-      patient.assignments = patient.assignments.filter(function (assignment) {
+      patient.assignments = await patient.assignments.filter(function (assignment) {
+        console.log(assignment._id)
+        // eslint-disable-next-line eqeqeq
         return assignment._id != req.body.assignment_id
       })
       try {
@@ -160,7 +214,7 @@ exports.deleteAssignment = async (req, res, next) => {
         res.status(httpStatus.CREATED)
           .send(savedPatience.transform())
       } catch (error) {
-        // console.log(error)
+        console.log(error)
         return next(error)
       }
     }
