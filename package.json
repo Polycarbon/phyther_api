@@ -8,7 +8,8 @@
     "lint": "./node_modules/.bin/eslint **/*.js",
     "test": "set NODE_ENV=prod&& mocha --reporter spec",
     "prod": "node src/index.js cross-env NODE_ENV=prod",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "deploy": "git add . && git commit -a -m \"add get assigment\" && git push heroku master"
   },
   "keywords": [],
   "author": "Polycarbon",

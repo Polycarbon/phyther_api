@@ -12,6 +12,7 @@ router.post('/login', patientController.login) // login
 router.get('', patientController.getPatient)
 router.get('/:HN', patientController.getPatientByHN)
 router.get('/generate/:n', patientController.generate) // genarate
+router.get('/assignment/:HN', patientController.getAssignment)
 router.post('/assign/:HN', patientController.assign)
 router.post('/updateAssignment/:HN', patientController.updateAssignment)
 router.post('/mockAssignment/:HN', patientController.mockAssignments)

@@ -59,7 +59,21 @@ exports.getPatientByHN = (req, res, next) => {
         })
     })
 }
-
+exports.getAssignment = (req, res, next) => {
+  Patient.findOne(req.params)
+    .then(async patient => {
+      res.status(httpStatus.OK)
+        .send({
+          message: 'OK',
+          assignments: patient.assignments
+        })
+    }).catch(err => {
+      res.status(httpStatus.INTERNAL_SERVER_ERROR)
+        .send({
+          message: err.message || 'Some error occurred while retrieving notes.'
+        })
+    })
+}
 exports.assign = async (req, res, next) => {
   // Find user and update it with the request body
   try {
