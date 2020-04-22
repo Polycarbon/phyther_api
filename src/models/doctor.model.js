@@ -5,5 +5,4 @@ const Schema = mongoose.Schema
 const doctorSchema = new Schema({
   patients: [{type: Schema.Types.ObjectId, ref: 'User'}]
 })
-
 module.exports = User.discriminator('doctor', doctorSchema)

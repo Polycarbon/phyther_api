@@ -31,14 +31,18 @@ const userSchema = new Schema({
     type: String,
     maxlength: 50
   },
-  type: {
+  role: {
     type: String,
     default: 'user',
     enum: roles
+  },
+  refreshToken: {
+    type: String,
+    default: false
   }
 }, {
   timestamps: true,
-  discriminatorKey: 'type'
+  discriminatorKey: 'role'
 })
 userSchema.pre('save', async function save (next) {
   try {
@@ -57,7 +61,7 @@ userSchema.pre('save', async function save (next) {
 userSchema.method({
   transform () {
     const transformed = this.toObject()
-    const exceptfields = ['password', 'updatedAt']
+    const exceptfields = ['password', 'updatedAt', 'createdAt', 'refreshToken', 'patients']
 
     exceptfields.forEach((field) => {
       delete transformed[field]

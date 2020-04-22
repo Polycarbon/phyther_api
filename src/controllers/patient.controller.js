@@ -24,7 +24,9 @@ exports.login = async (req, res, next) => {
     const patient = await Patient.findAndGenerateToken(req.body)
     const payload = {data: patient.transform()}
     const token = jwt.sign(payload, config.secret)
-    return res.json({message: 'OK', accessToken: token, patient: patient.transform()})
+    patient.updateAssignmentStatus()
+    let updatedPatient = await patient.save()
+    return res.json({message: 'OK', accessToken: token, patient: updatedPatient.transform()})
   } catch (error) {
     next(error)
   }
@@ -59,13 +61,16 @@ exports.getPatientByHN = (req, res, next) => {
         })
     })
 }
+
 exports.getAssignment = (req, res, next) => {
   Patient.findOne(req.params)
     .then(async patient => {
+      patient.updateAssignmentStatus()
+      let updatedPatient = await patient.save()
       res.status(httpStatus.OK)
         .send({
           message: 'OK',
-          assignments: patient.assignments
+          assignments: updatedPatient.assignments
         })
     }).catch(err => {
       res.status(httpStatus.INTERNAL_SERVER_ERROR)
@@ -74,25 +79,24 @@ exports.getAssignment = (req, res, next) => {
         })
     })
 }
+
 exports.assign = async (req, res, next) => {
   // Find user and update it with the request body
   try {
     let startDate = new Date(req.body.start_date)
     let endDate = new Date(req.body.end_date)
-    let i = 0
     let course = await Course.findOne({course_name: req.body.name})
     // eslint-disable-next-line no-unmodified-loop-condition
     for (let d = startDate; d <= endDate; d.setDate(d.getDate() + 1)) {
       course.exercises.forEach(async exercise => {
         if (exercise.routine.indexOf(getDayOfWeek(d)) !== -1) {
-          i += 1
           let assignment = {}
           // eslint-disable-next-line camelcase
           let {model_name, gestures, layer, weight} = exercise
           assignment.type = 'assignment'
           // eslint-disable-next-line camelcase
           assignment.model_name = model_name
-          assignment.assignment_name = course.course_name + ' ' + i
+          assignment.assignment_name = course.course_name
           assignment.layer = layer
           assignment.weight = weight
           assignment.gestures = gestures
@@ -130,6 +134,7 @@ exports.updateAssignment = async (req, res, next) => {
   }
   let itemsProcessed = 0
   gestures.forEach(async (gesture, index, array) => {
+    update['assignments.$[assignment].gestures.$[gesture].complete'] = gesture.complete
     update['assignments.$[assignment].gestures.$[gesture].pass'] = gesture.pass
     update['assignments.$[assignment].gestures.$[gesture].fail'] = gesture.fail
     let opts = {
@@ -205,7 +210,7 @@ exports.mockAssignments = async (req, res, next) => {
       strict: false,
       new: true
     }
-    let result = await Patient.update(query, {$set: update}, opts)
+    await Patient.update(query, {$set: update}, opts)
   })
   res.send('ok')
 }

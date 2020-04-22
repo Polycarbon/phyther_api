@@ -14,7 +14,6 @@ const handleJWT = (req, res, next, roles) => async (err, user, info) => {
     error ? error.message : 'Unauthorized',
     httpStatus.UNAUTHORIZED
   )
-
   // log user in
   try {
     if (error || !user) throw error
@@ -22,9 +21,8 @@ const handleJWT = (req, res, next, roles) => async (err, user, info) => {
   } catch (e) {
     return next(apiError)
   }
-
   // see if user is authorized to do the action
-  if (!roles.includes(user.role)) {
+  if (roles && !roles.includes(user.role)) {
     return next(new APIError('Forbidden', httpStatus.FORBIDDEN))
   }
 
@@ -34,11 +32,11 @@ const handleJWT = (req, res, next, roles) => async (err, user, info) => {
 }
 
 // exports the middleware
-const authorize = (roles = User.type) => (req, res, next) =>
+const authorize = (roles = User.role) => (req, res, next) => {
   passport.authenticate(
     'jwt',
     { session: false },
     handleJWT(req, res, next, roles)
   )(req, res, next)
-
+}
 module.exports = authorize

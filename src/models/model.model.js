@@ -39,7 +39,8 @@ const modelSchema = new Schema({
       type: Number
     },
     complete: {
-      type: Boolean
+      type: Boolean,
+      default: false
     },
     pass: {
       type: Number,
