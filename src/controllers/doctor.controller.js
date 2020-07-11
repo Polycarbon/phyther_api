@@ -1,6 +1,6 @@
 const User = require('../models/user.model')
 const Doctor = require('../models/doctor.model')
-const Course = require('../models/course.model')
+const Course = require('../models/event.model')
 const Patient = require('../models/patient.model')
 const httpStatus = require('http-status')
 

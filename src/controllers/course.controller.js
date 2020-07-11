@@ -1,76 +1,84 @@
+const Patient = require('../models/patient.model')
 const Course = require('../models/course.model')
 const httpStatus = require('http-status')
 
-exports.createCourse = async (req, res, next) => {
-  try {
-    console.log(req.body.exercises[0].routine)
-    const course = new Course(req.body)
-    const savedCourse = await course.save()
-    res.status(httpStatus.CREATED)
-      .send(savedCourse)
-  } catch (error) {
-    console.log(error)
-    res.status(httpStatus.BAD_REQUEST)
-      .send(error)
-  }
-}
+// ////////////////////////////////////////////
+// events
+// ////////////////////////////////////////////
 
-exports.find = async (req, res, next) => {
-  Course.find()
-    .then(async models => {
-      res.status(httpStatus.OK)
-        .send(models)
-    }).catch(err => {
-      res.status(httpStatus.INTERNAL_SERVER_ERROR)
-        .send({
-          message: err.message || 'Some error occurred while retrieving notes.'
-        })
-    })
-}
-
-exports.findByName = async (req, res, next) => {
-  Course.findOne(req.params)
-    .then(async model => {
-      if (!model) {
-        res.status(httpStatus.INTERNAL_SERVER_ERROR)
-          .send({
-            message: req.params.model_name + ' not exist.'
-          })
-        return
-      }
-      res.status(httpStatus.OK)
-        .send(model)
-    }).catch(err => {
-      res.status(httpStatus.INTERNAL_SERVER_ERROR)
-        .send({
-          message: err.message || 'Some error occurred while retrieving notes.'
-        })
-    })
-}
-
-exports.editCourse = async (req, res, next) => {
+exports.addCourse = async (req, res, next) => {
   // Find user and update it with the request body
-  let conditions = {model_name: req.params.model_name}
-  let update = {$set: req.body}
-
-  Course.findOneAndUpdate(conditions, update)
-    .then(original => {
-      if (!original) {
-        res.status(httpStatus.INTERNAL_SERVER_ERROR)
-          .send({
-            message: req.params.model_name + ' not exist.'
-          })
-        return
-      }
+  const today = new Date()
+  const startDate = new Date(req.body.startDate)
+  const endDate = new Date(req.body.endDate)
+  const diffTime = Math.abs(endDate - startDate)
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const patient = await Patient.findOne(req.params)
+  if (startDate <= today && today <= endDate) req.body.status = 'Active'
+  if (today >= endDate) req.body.status = 'Ended'
+  req.body.startDate = startDate
+  req.body.endDate = endDate
+  const event = new Course(req.body)
+  event.toPatient = patient._id
+  event.totalRound = diffDays
+  if (event.status === 'Active' || event.status === 'In progress') event.classes = 'event-success'
+  else if (event.status === 'Coming Soon' || event.status === 'New') event.classes = 'event-warning'
+  else if (event.status === 'Finished' || event.status === 'Ended') event.classes = 'event-primary'
+  const savedCourse = await event.save()
+  Patient.findOneAndUpdate(req.params, {$push: {courses: savedCourse._id}}, {new: true})
+    .then(patient => {
+      patient = patient.transform()
+      patient.courses.push(savedCourse)
       res.status(httpStatus.OK)
-        .send({
-          message: req.params.model_name + ' is updated.',
-          data: original
-        })
+        .send(patient)
     }).catch(err => {
       res.status(httpStatus.INTERNAL_SERVER_ERROR)
         .send({
           message: err.message || 'Some error occurred while retrieving notes.'
         })
+    })
+}
+
+exports.removeCourse = async (req, res, next) => {
+  // Find user and update it with the request body
+  const {HN, eventId} = req.params
+  // query
+  Patient.updateOne({HN}, {'$pull': { courses: eventId }}, { safe: true, multi: true })
+    .then(async result => {
+      await Course.deleteOne({_id: eventId})
+      res.status(httpStatus.OK)
+        .send(result)
+    }).catch(err => {
+      res.status(httpStatus.INTERNAL_SERVER_ERROR)
+        .send({
+          message: err.message || 'Some error occurred while retrieving notes.'
+        })
+    })
+}
+
+exports.fetchCourses = async (req, res, next) => {
+  // Find user and update it with the request body
+  const today = new Date()
+  let startDate = new Date(today.getFullYear(), today.getMonth(), 0)
+  let endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  // if startDate or endDate is defined
+  if (req.body.startDate) startDate = new Date(req.body.startDate)
+  if (req.body.endDate) endDate = new Date(req.body.endDate)
+  // query
+  Patient.findOne(req.params)
+    .populate({
+      path: 'courses',
+      match: {$or: [{startDate: {$gte: startDate, $lt: endDate}}, {endDate: {$gte: startDate, $lt: endDate}}]}
+    })
+    .exec(async (err, patient) => {
+      console.log(patient)
+      if (err) {
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR)
+          .send({
+            message: err.message || 'Some error occurred while retrieving notes.'
+          })
+      }
+      res.status(httpStatus.OK)
+        .send(patient.transform())
     })
 }

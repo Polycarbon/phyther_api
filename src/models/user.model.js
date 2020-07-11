@@ -23,17 +23,20 @@ const userSchema = new Schema({
     minlength: 4,
     maxlength: 128
   },
-  first_name: {
+  firstName: {
     type: String,
     maxlength: 50
   },
-  last_name: {
+  lastName: {
     type: String,
     maxlength: 50
+  },
+  picURL: {
+    type: String
   },
   role: {
     type: String,
-    default: 'user',
+    default: 'patient',
     enum: roles
   },
   refreshToken: {
@@ -61,7 +64,7 @@ userSchema.pre('save', async function save (next) {
 userSchema.method({
   transform () {
     const transformed = this.toObject()
-    const exceptfields = ['password', 'updatedAt', 'createdAt', 'refreshToken', 'patients']
+    const exceptfields = ['password', 'updatedAt', 'createdAt', 'refreshToken', 'patients', '__v']
 
     exceptfields.forEach((field) => {
       delete transformed[field]
@@ -81,11 +84,11 @@ userSchema.statics = {
   checkDuplicateEmailError (err) {
     // console.log(Object.keys(err.errors))
     if (err.code === 11000) {
-      var error = new Error('Email already taken')
+      var error = new Error('username already exist')
       error.errors = [{
-        field: 'email',
+        field: 'username',
         location: 'body',
-        messages: ['Email already taken']
+        messages: ['username already exist']
       }]
       error.status = httpStatus.CONFLICT
       return error
@@ -99,7 +102,7 @@ userSchema.statics = {
     if (!username) throw new APIError('Username must be provided for login')
 
     const user = await this.findOne({ username }).exec()
-    if (!user) throw new APIError(`No user associated with ${username}`, httpStatus.NOT_FOUND)
+    if (!user) throw new APIError(`No user associated with ${username}`, httpStatus.UNAUTHORIZED)
 
     const passwordOK = await user.passwordMatches(password)
 

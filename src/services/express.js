@@ -11,6 +11,8 @@ const apiRouter = require('../routes/api')
 const passport = require('passport')
 const passportJwt = require('../services/passport')
 
+require('../services/cronjob')
+
 const app = express()
 app.use(bodyParser.json())
 app.use(cors())

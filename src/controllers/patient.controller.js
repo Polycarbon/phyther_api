@@ -4,8 +4,12 @@ const httpStatus = require('http-status')
 const jwt = require('jsonwebtoken')
 const config = require('../config')
 const axios = require('axios')
-const Course = require('../models/course.model')
+const Event = require('../models/event.model')
+const Model = require('../models/model.model')
 
+// ////////////////////////////////////////////
+// Auth
+// ////////////////////////////////////////////
 exports.register = async (req, res, next) => {
   console.log(req.body)
   try {
@@ -32,17 +36,31 @@ exports.login = async (req, res, next) => {
   }
 }
 
+// ////////////////////////////////////////////
+// Patient
+// ////////////////////////////////////////////
+
 exports.getPatient = (req, res, next) => {
   Patient.find()
-    .then(async patients => {
+    .populate({
+      path: 'courses',
+      match: {$or: [{status: 'Active'}, {status: 'Coming Soon'}]}
+    })
+    .populate({
+      path: 'exercises',
+      match: {$or: [{status: 'New'}, {status: 'In progress'}]}
+    })
+    .exec(async (err, patients) => {
+      console.log(patients[0])
+      if (err) {
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR)
+          .send({
+            message: err.message || 'Some error occurred while retrieving notes.'
+          })
+      }
       let transformedPatients = await patients.map(patient => patient.transform())
       res.status(httpStatus.OK)
         .send(transformedPatients)
-    }).catch(err => {
-      res.status(httpStatus.INTERNAL_SERVER_ERROR)
-        .send({
-          message: err.message || 'Some error occurred while retrieving notes.'
-        })
     })
 }
 
@@ -80,12 +98,15 @@ exports.getAssignment = (req, res, next) => {
     })
 }
 
+// ////////////////////////////////////////////
+// assignment
+// ////////////////////////////////////////////
 exports.assign = async (req, res, next) => {
   // Find user and update it with the request body
   try {
     let startDate = new Date(req.body.start_date)
     let endDate = new Date(req.body.end_date)
-    let course = await Course.findOne({course_name: req.body.name})
+    let course = await Event.findOne({course_name: req.body.name})
     // eslint-disable-next-line no-unmodified-loop-condition
     for (let d = startDate; d <= endDate; d.setDate(d.getDate() + 1)) {
       course.exercises.forEach(async exercise => {
@@ -245,11 +266,12 @@ exports.generate = async (req, res, next) => {
   let results = data['data']['results']
   let savedPatients = await results.map(async user => {
     let patient = new Patient({
-      HN: 'HN' + Math.floor(Math.random() * (899)) + 100,
+      HN: Math.floor(Math.random() * (899)) + 100,
       username: user.login.username,
       password: user.login.password,
-      first_name: user.name.first,
-      last_name: user.name.last
+      firstName: user.name.first,
+      lastName: user.name.last,
+      picURL: user.picture.medium
     })
     let savedPatient = await patient.save()
     return savedPatient

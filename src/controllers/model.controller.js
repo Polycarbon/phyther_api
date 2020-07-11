@@ -1,10 +1,11 @@
 const Model = require('../models/model.model')
 const httpStatus = require('http-status')
 
-exports.createModel = async (req, res, next) => {
+exports.createCourse = async (req, res, next) => {
   try {
-    const model = new Model(req.body)
-    const savedModel = await model.save()
+    console.log(req.body)
+    const course = new Model(req.body)
+    const savedModel = await course.save()
     res.status(httpStatus.CREATED)
       .send(savedModel)
   } catch (error) {
@@ -33,33 +34,28 @@ exports.findByName = async (req, res, next) => {
       if (!model) {
         res.status(httpStatus.INTERNAL_SERVER_ERROR)
           .send({
-            success: false,
             message: req.params.model_name + ' not exist.'
           })
         return
       }
       res.status(httpStatus.OK)
-        .send({
-          success: true,
-          model: model
-        })
+        .send(model)
     }).catch(err => {
       res.status(httpStatus.INTERNAL_SERVER_ERROR)
         .send({
-          success:false,
           message: err.message || 'Some error occurred while retrieving notes.'
         })
     })
 }
 
-exports.editModel = async (req, res, next) => {
+exports.edit = async (req, res, next) => {
   // Find user and update it with the request body
-  let conditions = {model_name: req.params.model_name}
+  let conditions = {_id: req.params._id}
   let update = {$set: req.body}
 
-  Model.findOneAndUpdate(conditions, update)
-    .then(original => {
-      if (!original) {
+  Model.findOneAndUpdate(conditions, update, {new: true})
+    .then(updated => {
+      if (!updated) {
         res.status(httpStatus.INTERNAL_SERVER_ERROR)
           .send({
             message: req.params.model_name + ' not exist.'
@@ -68,7 +64,35 @@ exports.editModel = async (req, res, next) => {
       }
       res.status(httpStatus.OK)
         .send({
-          message: req.params.model_name + ' is updated.'
+          message: req.params.model_name + ' is updated.',
+          course: updated
+        })
+    }).catch(err => {
+      res.status(httpStatus.INTERNAL_SERVER_ERROR)
+        .send({
+          message: err.message || 'Some error occurred while retrieving notes.'
+        })
+    })
+}
+
+exports.deleteById = async (req, res, next) => {
+  // Find user and update it with the request body
+  let conditions = {_id: req.params._id}
+
+  Model.deleteOne(conditions)
+    .then(result => {
+      console.log(result)
+      if (!result) {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR)
+          .send({
+            message: req.params.model_name + ' not exist.'
+          })
+        return
+      }
+      res.status(httpStatus.OK)
+        .send({
+          message: req.params.model_name + ' is updated.',
+          course: result
         })
     }).catch(err => {
       res.status(httpStatus.INTERNAL_SERVER_ERROR)

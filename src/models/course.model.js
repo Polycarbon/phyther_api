@@ -1,43 +1,39 @@
 'use strict'
 const mongoose = require('mongoose')
-const modelSchema = require('./model.model').schema
 const Schema = mongoose.Schema
+const Event = require('./event.model')
 // const uniqueValidator = require('mongoose-unique-validator')
 
 const courseSchema = new Schema({
-  course_name: {
+  status: {
     type: String,
-    unique: true,
-    required: true
+    enum: ['Ended', 'Active', 'Coming Soon'],
+    default: 'Coming Soon'
   },
-  days: {
-    type: Number
+  isAssign: {
+    type: Boolean,
+    default: false
   },
-  exercises: [modelSchema]
-}, {
-  timestamps: true
+  presentRound: {
+    type: Number,
+    default: 0
+  },
+  totalRound: {
+    type: Number,
+    default: 0
+  },
+  gestureSetting: [
+    {
+      _id: false,
+      id: Number,
+      name: String,
+      round: Number,
+      enable: {
+        type: Boolean,
+        default: true
+      }
+    }
+  ]
 })
-const exercisesDoc = courseSchema.path('exercises')
-exercisesDoc.discriminator('exercise', new Schema({
-  gestures: [{
-    gesture_id: {
-      type: Number
-    },
-    name: {
-      type: String
-    },
-    picture: {
-      type: String
-    },
-    video: String,
-    round: {
-      type: Number
-    },
-    enable: Boolean
-  }],
-  routine: [{
-    type: String,
-    enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  }]
-}))
-module.exports = mongoose.model('course', courseSchema)
+// modelSchema.plugin(uniqueValidator)
+module.exports = Event.discriminator('course', courseSchema)

@@ -13,12 +13,10 @@ const jwtOptions = {
 }
 
 const jwtStrategy = new JwtStrategy(jwtOptions, (jwtPayload, done) => {
-  console.log(jwtPayload.data)
   User.findById(jwtPayload.data, (err, user) => {
     if (err) {
       return done(err, null)
     }
-
     if (user) {
       return done(null, user)
     } else {

@@ -8,11 +8,11 @@ const { create } = require('../../validations/user.validation')
 const auth = require('../../middlewares/authorization')
 
 /* ----------  Validate and Register  ---------- */
-router.post('/register', validator(create), authController.register)
+router.post('/register', authController.register)
 /* ----------  Login  ---------- */
 router.post('/login', authController.login)
 /* ----------  Refresh Token  ---------- */
-router.post('/refreshToken', authController.refreshToken)
+router.post('/refresh-token', authController.refreshToken)
 
 // Authentication example
 router.get('/secret1', auth(), (req, res) => {

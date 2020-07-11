@@ -8,26 +8,36 @@ const APIError = require('../utils/APIError')
 
 exports.register = async (req, res, next) => {
   try {
+    if (req.body.picUrl == null) {
+      req.body.picUrl = 'https://api.adorable.io/avatars/80/' + req.body.username + '.png'
+    }
     const user = new User(req.body)
-    const savedUser = await user.save()
-    res.status(httpStatus.CREATED)
-      .send(savedUser.transform())
+    const payload = {data: user.transform()}
+    let token = jwt.sign(payload, config.secret, {expiresIn: config.jwt.access_token_duration})
+    // If user does not have a refresh token assigned
+    if (user.refreshToken === 'false') {
+      // user.refreshToken = jwt.sign(payload, config.jwt.secret, {expiresIn: config.jwt.refresh_token_duration})
+      user.refreshToken = token
+    }
+    user.save().then(user => {
+      return res.status(httpStatus.CREATED)
+        .send({message: 'OK', userData: user.transform(), accessToken: token, refreshToken: user.refreshToken, exp: 60 * 60})
+    })
   } catch (error) {
     return next(error)
   }
 }
 
 exports.login = async (req, res, next) => {
-  console.log(req.body)
   try {
     const user = await User.findAndGenerateToken(req.body)
     const payload = {data: user.transform()}
-    let token = jwt.sign(payload, config.secret, {expiresIn: config.jwt.refresh_token_duration})
+    let token = jwt.sign(payload, config.secret, {expiresIn: config.jwt.access_token_duration})
     let refreshToken
     // If user does not have a refresh token assigned
     if (user.refreshToken === 'false') {
-      let refreshToken = jwt.sign(payload, config.jwt.secret, {expiresIn: config.jwt.access_token_duration})
-      user.refreshToken = refreshToken
+      // user.refreshToken = jwt.sign(payload, config.jwt.secret, {expiresIn: config.jwt.refresh_token_duration})
+      user.refreshToken = token
     } else {
       // User has a refresh token so try and verify it and renew if expired
       jwt.verify(user.refreshToken, config.jwt.secret, (err, decoded) => {
@@ -38,7 +48,9 @@ exports.login = async (req, res, next) => {
       })
     }
     user.save().then(() => {
-      return res.json({message: 'OK', token: {access: token, refresh: user.refreshToken}})
+      let exp = new Date()
+      exp.setHours(exp.getHours() + 1)
+      return res.json({message: 'OK', userData: user.transform(), accessToken: token, refreshToken: user.refreshToken, exp: exp})
     })
   } catch (error) {
     next(error)
@@ -46,8 +58,9 @@ exports.login = async (req, res, next) => {
 }
 
 exports.refreshToken = (req, res, next) => {
-  let refreshToken = req.body.token
+  let refreshToken = req.body.accessToken
   // No refresh token supplied
+  // console.log(req.headers.authorization)
   if (!refreshToken) {
     return res.send(401)
   }
@@ -66,7 +79,9 @@ exports.refreshToken = (req, res, next) => {
       let payload = {data: user.transform()}
       // Create new access token
       let token = jwt.sign(payload, config.jwt.secret, {expiresIn: config.jwt.access_token_duration})
-      return res.json({message: 'OK', token: {access: token, refresh: refreshToken}}) // Send back both tokens
+      let exp = new Date()
+      exp.setHours(exp.getHours() + 1)
+      return res.json({message: 'OK', userData: user.transform(), accessToken: token, refreshToken: user.refreshToken, exp: exp}) // Send back both tokens
     })
   })
 }
