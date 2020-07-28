@@ -13,7 +13,7 @@ cron.schedule('1 * * * * *', async () => {
     const {title, model, presentRound, totalRound, toPatient, gestureSetting} = e
     const today = new Date()
     const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(23, 59, 59, 0)
     const exercise = new Exercise({title, model, round: presentRound + 1, startDate: today, endDate: tomorrow, result: gestureSetting})
     if (exercise.status === 'Active' || exercise.status === 'In progress') exercise.classes = 'event-success'
     else if (exercise.status === 'Coming Soon' || exercise.status === 'New') exercise.classes = 'event-warning'
@@ -23,7 +23,7 @@ cron.schedule('1 * * * * *', async () => {
       .then(() => {
         // patient.events.push(savedEvent)
         e.isAssign = true
-        e.presentRound = presentRound + 1
+        e.presentRound = presentRound + 0
         e.progress = Math.round((presentRound / totalRound) * 100)
         e.save()
       }).catch(err => {

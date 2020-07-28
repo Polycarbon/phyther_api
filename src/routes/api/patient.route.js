@@ -23,6 +23,7 @@ router.get('/:HN/courses', courseController.fetchCourses)
 router.delete('/:HN/courses/:eventId', courseController.removeCourse)
 
 router.get('/:HN/exercises', exerciseController.fetchExercises)
+router.post('/:HN/exercises/:eventId', exerciseController.updateExercise)
 router.delete('/:HN/exercises/:eventId', exerciseController.removeExercise)
 
 router.get('/assignment/:HN', patientController.getAssignment)

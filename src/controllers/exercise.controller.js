@@ -1,38 +1,20 @@
 const Patient = require('../models/patient.model')
-const Course = require('../models/course.model')
+const Exercise = require('../models/event.model')
 const httpStatus = require('http-status')
 
 // ////////////////////////////////////////////
 // events
 // ////////////////////////////////////////////
 
-exports.addCourse = async (req, res, next) => {
+exports.removeExercise = async (req, res, next) => {
   // Find user and update it with the request body
-  const today = new Date()
-  const startDate = new Date(req.body.startDate)
-  startDate.setHours(startDate.getHours() + 7)
-  const endDate = new Date(req.body.endDate)
-  endDate.setHours(endDate.getHours() + 7)
-  const diffTime = Math.abs(endDate - startDate)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  const patient = await Patient.findOne(req.params)
-  if (startDate <= today && today <= endDate) req.body.status = 'Active'
-  if (today >= endDate) req.body.status = 'Ended'
-  req.body.startDate = startDate
-  req.body.endDate = endDate
-  const event = new Course(req.body)
-  event.toPatient = patient._id
-  event.totalRound = diffDays
-  if (event.status === 'Active' || event.status === 'In progress') event.classes = 'event-success'
-  else if (event.status === 'Coming Soon' || event.status === 'New') event.classes = 'event-warning'
-  else if (event.status === 'Finished' || event.status === 'Ended') event.classes = 'event-primary'
-  const savedCourse = await event.save()
-  Patient.findOneAndUpdate(req.params, {$push: {courses: savedCourse._id}}, {new: true})
-    .then(patient => {
-      patient = patient.transform()
-      patient.courses.push(savedCourse)
+  const {HN, eventId} = req.params
+  // query
+  Patient.updateOne({HN}, {'$pull': { exercises: eventId }}, { safe: true, multi: true })
+    .then(async result => {
+      await Exercise.deleteOne({_id: eventId})
       res.status(httpStatus.OK)
-        .send(patient)
+        .send(result)
     }).catch(err => {
       res.status(httpStatus.INTERNAL_SERVER_ERROR)
         .send({
@@ -40,14 +22,13 @@ exports.addCourse = async (req, res, next) => {
         })
     })
 }
-
-exports.removeCourse = async (req, res, next) => {
+exports.updateExercise = async (req, res, next) => {
   // Find user and update it with the request body
-  const {HN, eventId} = req.params
+  const {eventId} = req.params
+  let result = req.body.result
   // query
-  Patient.updateOne({HN}, {'$pull': { courses: eventId }}, { safe: true, multi: true })
+  Exercise.findByIdAndUpdate(eventId, {'result': result}, { safe: true, multi: true })
     .then(async result => {
-      await Course.deleteOne({_id: eventId})
       res.status(httpStatus.OK)
         .send(result)
     }).catch(err => {
@@ -58,7 +39,7 @@ exports.removeCourse = async (req, res, next) => {
     })
 }
 
-exports.fetchCourses = async (req, res, next) => {
+exports.fetchExercises = async (req, res, next) => {
   // Find user and update it with the request body
   const today = new Date()
   let startDate = new Date(today.getFullYear(), today.getMonth(), 0)
@@ -69,7 +50,7 @@ exports.fetchCourses = async (req, res, next) => {
   // query
   Patient.findOne(req.params)
     .populate({
-      path: 'courses',
+      path: 'exercises',
       match: {$or: [{startDate: {$gte: startDate, $lt: endDate}}, {endDate: {$gte: startDate, $lt: endDate}}]}
     })
     .exec(async (err, patient) => {

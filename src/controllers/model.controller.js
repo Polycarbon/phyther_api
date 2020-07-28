@@ -28,7 +28,7 @@ exports.find = async (req, res, next) => {
     })
 }
 
-exports.findByName = async (req, res, next) => {
+exports.findById = async (req, res, next) => {
   Model.findOne(req.params)
     .then(async model => {
       if (!model) {

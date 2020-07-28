@@ -265,10 +265,11 @@ exports.generate = async (req, res, next) => {
   let data = await axios.get('https://randomuser.me/api/?inc=gender,name,login,email,picture,cell,location&nat=us&results=' + req.params.n)
   let results = data['data']['results']
   let savedPatients = await results.map(async user => {
+    const HN = Math.floor(Math.random() * (899)) + 100
     let patient = new Patient({
-      HN: Math.floor(Math.random() * (899)) + 100,
-      username: user.login.username,
-      password: user.login.password,
+      HN: HN,
+      username: `HN${HN}`,
+      password: '1234',
       firstName: user.name.first,
       lastName: user.name.last,
       picURL: user.picture.medium
