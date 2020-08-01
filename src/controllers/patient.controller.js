@@ -66,6 +66,14 @@ exports.getPatient = (req, res, next) => {
 
 exports.getPatientByHN = (req, res, next) => {
   Patient.findOne(req.params)
+    .populate({
+      path: 'courses',
+      match: {$or: [{status: 'Active'}, {status: 'Coming Soon'}]}
+    })
+    .populate({
+      path: 'exercises',
+      match: {$or: [{status: 'New'}, {status: 'In progress'}]}
+    })
     .then(async patient => {
       res.status(httpStatus.OK)
         .send({

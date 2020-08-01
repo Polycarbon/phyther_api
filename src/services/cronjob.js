@@ -13,7 +13,7 @@ cron.schedule('1 * * * * *', async () => {
     const {title, model, presentRound, totalRound, toPatient, gestureSetting} = e
     const today = new Date()
     const tomorrow = new Date(today)
-    tomorrow.setHours(23, 59, 59, 0)
+    tomorrow.setDate(today.getDate() + 1)
     const exercise = new Exercise({title, model, round: presentRound + 1, startDate: today, endDate: tomorrow, result: gestureSetting})
     if (exercise.status === 'Active' || exercise.status === 'In progress') exercise.classes = 'event-success'
     else if (exercise.status === 'Coming Soon' || exercise.status === 'New') exercise.classes = 'event-warning'
@@ -42,8 +42,24 @@ cron.schedule('0 0 0 * * *', async () => {
       }
       console.log(writeResult)
     })
+  Course.update({status: 'Active', endDate: {$lt: new Date()}},
+    {$set: {status: 'Ended'}}, {'multi': true},
+    (err, writeResult) => {
+      if (err) {
+        console.log(err)
+      }
+      console.log(writeResult)
+    })
   Course.update({status: 'Active'},
     {$set: {isAssign: false}}, {'multi': true},
+    (err, writeResult) => {
+      if (err) {
+        console.log(err)
+      }
+      console.log(writeResult)
+    })
+  Exercise.update({$or: [{status: 'New'}, {status: 'In progress'}], endDate: {$lt: new Date()}},
+    {$set: {status: 'Finished'}}, {'multi': true},
     (err, writeResult) => {
       if (err) {
         console.log(err)
